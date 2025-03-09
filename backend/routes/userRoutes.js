@@ -3,6 +3,7 @@ import { isAuth } from "../middlewares/isAuth.js";
 import {
   bookmarkPost,
   followAndUnfollowUser,
+  getAllUsers,
   getBookmarkPosts,
   myProfile,
   removePostFromBookmark,
@@ -14,9 +15,10 @@ import {
 import uploadFile from "../middlewares/multers.js";
 const router = express.Router();
 router.get("/me", isAuth, myProfile);
+router.get("/all", isAuth, getAllUsers);
 router.get("/bookmarks", isAuth, getBookmarkPosts);
 router.post("/bookmark/:postId", isAuth, bookmarkPost);
-router.delete("/bookmark/:postId", isAuth, removePostFromBookmark);
+router.delete("/removebookmark/:postId", isAuth, removePostFromBookmark);
 router.get("/:id", isAuth, userProfile);
 router.post("/:id", isAuth, updatePassword);
 router.put("/:id", isAuth, uploadFile, updateProfile);

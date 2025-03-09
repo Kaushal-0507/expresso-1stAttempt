@@ -10,8 +10,22 @@ export const myProfile = TryCatch(async (req, res) => {
   res.json(user);
 });
 
+export const getAllUsers = TryCatch(async (req, res) => {
+  try {
+    const search = req.query.search || "";
+    const users = await User.find({}).select("-password");
+
+    res.json(users);
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
+    });
+  }
+})
+
 export const userProfile = TryCatch(async (req, res) => {
-  const user = await User.findById(req.params.id).select("-password");
+  const user = await User.findById(req.params.id).select("-password").populate("followers", "-password")
+  .populate("followings", "-password");;
 
   if (!user)
     return res.status(404).json({
@@ -47,6 +61,8 @@ export const followAndUnfollowUser = TryCatch(async (req, res) => {
 
     res.json({
       message: "User Unfollowed",
+      user: loggedInUser,
+      followUser: user
     });
   } else {
     loggedInUser.followings.push(user._id);
@@ -57,6 +73,8 @@ export const followAndUnfollowUser = TryCatch(async (req, res) => {
 
     res.json({
       message: "User Followed",
+      user: loggedInUser,
+      followUser: user
     });
   }
 });
@@ -167,8 +185,11 @@ export const bookmarkPost = TryCatch(async (req, res) => {
   user.bookmarks.push(postId);
   await user.save();
 
+  // const newPosts = await Post.find({}).populate("owner", "-password")
+
   res.status(200).json({ bookmarks: user.bookmarks });
 });
+
 export const removePostFromBookmark = TryCatch(async (req, res) => {
   const { postId } = req.params;
   const user = await User.findById(req.user._id);

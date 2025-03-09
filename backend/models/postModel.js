@@ -35,7 +35,11 @@ const postSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
       },
-      name: {
+      firstName: {
+        type: String,
+        required: true,
+      },
+      lastName: {
         type: String,
         required: true,
       },

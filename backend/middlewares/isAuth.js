@@ -12,7 +12,6 @@ export const isAuth = async (req, res, next) => {
     }
 
     const token = authHeader.split(" ")[1]; // Extract the token from the header
-    console.log(authHeader);
 
     const decodedData = jwt.verify(token, process.env.JWT_SEC);
 

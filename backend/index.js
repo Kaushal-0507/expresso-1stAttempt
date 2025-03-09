@@ -55,24 +55,24 @@ app.get("/chats", isAuth, async (req, res) => {
 });
 
 // to get all users
-app.get("/api/user/all", isAuth, async (req, res) => {
-  try {
-    const search = req.query.search || "";
-    const users = await User.find({
-      name: {
-        $regex: search,
-        $options: "i",
-      },
-      _id: { $ne: req.user._id },
-    }).select("-password");
+// app.get("/api/user/all", isAuth, async (req, res) => {
+//   try {
+//     const search = req.query.search || "";
+//     const users = await User.find({
+//       name: {
+//         $regex: search,
+//         $options: "i",
+//       },
+//       _id: { $ne: req.user._id },
+//     }).select("-password");
 
-    res.json(users);
-  } catch (error) {
-    res.status(500).json({
-      message: error.message,
-    });
-  }
-});
+//     res.json(users);
+//   } catch (error) {
+//     res.status(500).json({
+//       message: error.message,
+//     });
+//   }
+// });
 
 // importing routes
 import userRoutes from "./routes/userRoutes.js";
