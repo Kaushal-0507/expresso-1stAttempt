@@ -65,8 +65,8 @@ export const getAllPosts = TryCatch(async (req, res) => {
 });
 
 export const getAllUserPosts = TryCatch(async (req, res) => {
-  const { _id } = req.user;
-  const posts = await Post.find({ owner: _id })
+  const { id } = req.params;
+  const posts = await Post.find({ owner: id })
   .sort({ createdAt: -1 })
   .populate("owner", "-password")
   .populate({
