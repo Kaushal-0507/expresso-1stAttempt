@@ -42,10 +42,10 @@ export const sendMessage = TryCatch(async (req, res) => {
       sender: senderId,
     },
   });
-  const reciverSocketId = getReciverSocketId(recieverId);
+  const receiverSocketId = getreceiverSocketId(recieverId);
 
-  if (reciverSocketId) {
-    io.to(reciverSocketId).emit("newMessage", newMessage);
+  if (receiverSocketId) {
+    io.to(receiverSocketId).emit("newMessage", newMessage);
   }
 
   res.status(201).json(newMessage);

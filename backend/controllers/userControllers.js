@@ -3,6 +3,7 @@ import TryCatch from "../utils/TryCatch.js";
 import getDataUrl from "../utils/urlGenerator.js";
 import cloudinary from "cloudinary";
 import bcrypt from "bcrypt";
+import { createNotification } from "../services/notificationService.js";
 
 export const myProfile = TryCatch(async (req, res) => {
   const user = await User.findById(req.user._id).select("-password");
@@ -59,6 +60,9 @@ export const followAndUnfollowUser = TryCatch(async (req, res) => {
     await loggedInUser.save();
     await user.save();
 
+    // Create notification for unfollow
+    await createNotification(user._id, loggedInUser._id, "unfollow");
+
     res.json({
       message: "User Unfollowed",
       user: loggedInUser,
@@ -70,6 +74,9 @@ export const followAndUnfollowUser = TryCatch(async (req, res) => {
 
     await loggedInUser.save();
     await user.save();
+
+    // Create notification for follow
+    await createNotification(user._id, loggedInUser._id, "follow");
 
     res.json({
       message: "User Followed",

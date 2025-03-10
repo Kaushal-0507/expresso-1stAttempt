@@ -6,6 +6,7 @@ import cookieParser from "cookie-parser";
 import { isAuth } from "./middlewares/isAuth.js";
 import { Chat } from "./models/chatModel.js";
 import { User } from "./models/userModel.js";
+import { app, server } from "./socket/socket.js";
 import cors from "cors";
 
 // Enable CORS for all routes
@@ -18,9 +19,15 @@ cloudinary.v2.config({
   api_secret: process.env.Cloudinary_Secret,
 });
 
-const app = express();
-
-app.use(cors());
+// Configure CORS
+app.use(
+  cors({
+    origin: ["http://localhost:5173", "http://127.0.0.1:5173"],
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
 
 // using middleware
 app.use(express.json());
@@ -32,7 +39,7 @@ app.get("/", (req, res) => {
 });
 
 // to get all chats
-app.get("/chats", isAuth, async (req, res) => {
+app.get("api/messages/chats", isAuth, async (req, res) => {
   try {
     const chats = await Chat.find({
       users: req.user._id,
@@ -79,12 +86,14 @@ import userRoutes from "./routes/userRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
 import postRoutes from "./routes/postRoutes.js";
 import messageRoutes from "./routes/messageRoutes.js";
+import notificationRoutes from "./routes/notificationRoutes.js";
 
 //using routes
 app.use("/api/auth", authRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/post", postRoutes);
 app.use("/api/messages", messageRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 app.listen(port, () => {
   console.log(`server is running on http://localhost:${port}`);

@@ -2,6 +2,7 @@ import { Post } from "../models/postModel.js";
 import TryCatch from "../utils/TryCatch.js";
 import getDataUrl from "../utils/urlGenerator.js";
 import cloudinary from "cloudinary";
+import { createNotification } from "../services/notificationService.js";
 
 export const newPost = TryCatch(async (req, res) => {
   console.log(req.body)
@@ -86,24 +87,24 @@ export const likeUnlikePost = TryCatch(async (req, res) => {
 
   if (post.likes.includes(req.user._id)) {
     const index = post.likes.indexOf(req.user._id);
-
     post.likes.splice(index, 1);
-
     await post.save();
 
-    const newPosts = await Post.find({}).populate("owner", "-password")
-
+    const newPosts = await Post.find({}).populate("owner", "-password");
     res.json({
       message: "Post Unlike",
       posts: newPosts
     });
   } else {
     post.likes.push(req.user._id);
-
     await post.save();
 
-    const newPosts = await Post.find({}).populate("owner", "-password")
+    // Create notification for like
+    if (post.owner.toString() !== req.user._id.toString()) {
+      await createNotification(post.owner, req.user._id, "like", post._id);
+    }
 
+    const newPosts = await Post.find({}).populate("owner", "-password");
     res.json({
       message: "Post liked",
       posts: newPosts
@@ -128,8 +129,18 @@ export const commentOnPost = TryCatch(async (req, res) => {
 
   await post.save();
 
-  const newPosts = await Post.find({}).populate("owner", "-password")
+  // Create notification for comment
+  if (post.owner.toString() !== req.user._id.toString()) {
+    await createNotification(
+      post.owner,
+      req.user._id,
+      "comment",
+      post._id,
+      req.body.commentData.content
+    );
+  }
 
+  const newPosts = await Post.find({}).populate("owner", "-password");
   res.json({
     message: "Comment Added",
     posts: newPosts
