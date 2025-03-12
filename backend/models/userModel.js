@@ -12,13 +12,11 @@ const userSchema = new mongoose.Schema(
     },
     profileBg: {
       type: String,
-      default:
-        "https://static1.srcdn.com/wordpress/wp-content/uploads/2020/07/Andy-Samberg-as-Jake-Peralta-in-Brooklyn-Nine-Nine.jpghttps://static1.srcdn.com/wordpress/wp-content/uploads/2020/07/Andy-Samberg-as-Jake-Peralta-in-Brooklyn-Nine-Nine.jpg",
+      default: "https://i.redd.it/gocxo6n16m871.png",
     },
     profileImg: {
       type: String,
-      default:
-        "https://66.media.tumblr.com/74ef112cead7f1f4afce7893a96e3484/tumblr_oyal5v3s4z1r5aju9o2_1280.jpg",
+      default: "https://tse2.mm.bing.net/th?id=OIP.r-l3mhddNzm7351sOrTNjgHaHa&pid=Api&P=0&h=180",
     },
     email: {
       type: String,

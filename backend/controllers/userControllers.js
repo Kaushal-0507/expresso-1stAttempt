@@ -102,31 +102,36 @@ export const userFollowerAndFollowingData = TryCatch(async (req, res) => {
 });
 
 export const updateProfile = TryCatch(async (req, res) => {
-  const user = await User.findById(req.user._id);
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
 
-  const { name } = req.body;
+    // Update basic info
+    const { bio, portfolio, profileImg, profileBg } = req.body;
+    
+    if (bio !== undefined) user.bio = bio;
+    if (portfolio !== undefined) user.portfolio = portfolio;
+    if (profileImg !== undefined) user.profileImg = profileImg;
+    if (profileBg !== undefined) user.profileBg = profileBg;
 
-  if (name) {
-    user.name = name;
+    await user.save();
+
+    // Return updated user data
+    const updatedUser = await User.findById(user._id).select("-password");
+    
+    res.status(201).json({
+      message: "Profile updated successfully",
+      user: updatedUser
+    });
+  } catch (error) {
+    console.error("Profile update error:", error);
+    res.status(500).json({
+      message: "Failed to update profile",
+      error: error.message
+    });
   }
-
-  const file = req.file;
-  if (file) {
-    const fileUrl = getDataUrl(file);
-
-    await cloudinary.v2.uploader.destroy(user.profilePic.id);
-
-    const myCloud = await cloudinary.v2.uploader.upload(fileUrl.content);
-
-    user.profilePic.id = myCloud.public_id;
-    user.profilePic.url = myCloud.secure_url;
-  }
-
-  await user.save();
-
-  res.json({
-    message: "Profile updated",
-  });
 });
 
 export const updatePassword = TryCatch(async (req, res) => {
