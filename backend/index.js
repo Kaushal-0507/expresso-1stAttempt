@@ -10,6 +10,7 @@ import { createServer } from "http";
 import { Server } from "socket.io";
 import jwt from "jsonwebtoken";
 import { Message } from "./models/messageModel.js";
+import adminRoutes from "./routes/adminRoutes.js";
 
 // Initialize Express app
 const app = express();
@@ -27,7 +28,7 @@ const connectedUsers = new Map();
 // Socket.IO middleware for authentication
 io.use((socket, next) => {
   const authHeader = socket.handshake.auth.token;
-  
+
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
     return next(new Error("Authentication error: No token provided"));
   }
@@ -46,15 +47,15 @@ io.use((socket, next) => {
 // Socket.IO connection handling
 io.on("connection", (socket) => {
   console.log("User connected:", socket.userId);
-  connectedUsers.set(socket.userId, socket.id);
 
-  // Emit online users to all clients
+  // Add user to connected users and broadcast to all clients
+  connectedUsers.set(socket.userId, socket.id);
   io.emit("onlineUsers", Array.from(connectedUsers.keys()));
 
+  // Broadcast when user goes offline
   socket.on("disconnect", () => {
     console.log("User disconnected:", socket.userId);
     connectedUsers.delete(socket.userId);
-    io.emit("userDisconnected", socket.userId);
     io.emit("onlineUsers", Array.from(connectedUsers.keys()));
   });
 
@@ -62,6 +63,7 @@ io.on("connection", (socket) => {
   socket.on("joinChat", (receiverId) => {
     const roomId = [socket.userId, receiverId].sort().join("-");
     socket.join(roomId);
+    console.log(`User ${socket.userId} joined room ${roomId}`);
   });
 
   // Get chat history
@@ -73,6 +75,7 @@ io.on("connection", (socket) => {
         "and",
         receiverId
       );
+
       const messages = await Message.find({
         $or: [
           { sender: socket.userId, receiver: receiverId },
@@ -80,7 +83,13 @@ io.on("connection", (socket) => {
         ],
       })
         .sort({ timestamp: 1 })
-        .lean();
+        .lean()
+        .then((messages) =>
+          messages.map((msg) => ({
+            ...msg,
+            timestamp: msg.timestamp.toISOString(),
+          }))
+        );
 
       console.log("Found messages:", messages);
       socket.emit("chatHistory", messages);
@@ -91,37 +100,37 @@ io.on("connection", (socket) => {
   });
 
   // Handle new messages
-  socket.on("sendMessage", async ({ receiver, content, timestamp }) => {
+  socket.on("sendMessage", async (messageData) => {
     try {
-      console.log("Received message:", { receiver, content, timestamp });
+      const { receiver, content, timestamp } = messageData;
+      console.log("Received message:", messageData);
 
       // Create and save the message
       const message = new Message({
         sender: socket.userId,
         receiver,
         content,
-        timestamp: new Date(timestamp), // Parse the ISO string to Date
+        timestamp: new Date(timestamp),
       });
-      await message.save();
 
-      const savedMessage = await Message.findById(message._id)
-        .lean()
-        .then(msg => ({
-          ...msg,
-          timestamp: msg.timestamp.toISOString() // Convert back to ISO string
-        }));
-        
-      console.log("Saved message:", savedMessage);
+      const savedMessage = await message.save();
+      const messageToSend = {
+        ...savedMessage.toObject(),
+        timestamp: savedMessage.timestamp.toISOString(),
+      };
 
-      // Get the receiver's socket ID
+      console.log("Saved message:", messageToSend);
+
+      // Get room ID
+      const roomId = [socket.userId, receiver].sort().join("-");
+
+      // Emit to the room (both sender and receiver if they're in the room)
+      io.to(roomId).emit("newMessage", messageToSend);
+
+      // If receiver is not in the room but is online, send directly
       const receiverSocketId = connectedUsers.get(receiver);
-
-      // Send to sender
-      socket.emit("newMessage", savedMessage);
-
-      // Send to receiver if online
       if (receiverSocketId) {
-        io.to(receiverSocketId).emit("newMessage", savedMessage);
+        io.to(receiverSocketId).emit("newMessage", messageToSend);
       }
     } catch (error) {
       console.error("Error sending message:", error);
@@ -197,6 +206,7 @@ app.use("/api/user", userRoutes);
 app.use("/api/post", postRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/messages", messageRoutes);
+app.use("/api/admin", adminRoutes);
 
 // Start the server
 httpServer.listen(port, () => {

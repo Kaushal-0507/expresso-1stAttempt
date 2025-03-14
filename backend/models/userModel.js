@@ -16,7 +16,8 @@ const userSchema = new mongoose.Schema(
     },
     profileImg: {
       type: String,
-      default: "https://tse2.mm.bing.net/th?id=OIP.r-l3mhddNzm7351sOrTNjgHaHa&pid=Api&P=0&h=180",
+      default:
+        "https://tse2.mm.bing.net/th?id=OIP.r-l3mhddNzm7351sOrTNjgHaHa&pid=Api&P=0&h=180",
     },
     email: {
       type: String,
@@ -35,27 +36,29 @@ const userSchema = new mongoose.Schema(
     bio: {
       type: String,
       default: "",
-      maxLength: 160
+      maxLength: 160,
     },
     website: {
       type: String,
       default: "",
       validate: {
-        validator: function(v) {
+        validator: function (v) {
           if (!v) return true; // Allow empty string
-          return /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/.test(v);
+          return /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/.test(
+            v
+          );
         },
-        message: "Please enter a valid URL"
-      }
+        message: "Please enter a valid URL",
+      },
     },
     role: {
       type: String,
-      enum: ['user', 'admin'],
-      default: 'user'
+      enum: ["user", "admin"],
+      default: "user",
     },
     isActive: {
       type: Boolean,
-      default: true
+      default: true,
     },
     followers: [
       {
