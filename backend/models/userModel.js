@@ -32,6 +32,31 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    bio: {
+      type: String,
+      default: "",
+      maxLength: 160
+    },
+    website: {
+      type: String,
+      default: "",
+      validate: {
+        validator: function(v) {
+          if (!v) return true; // Allow empty string
+          return /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/.test(v);
+        },
+        message: "Please enter a valid URL"
+      }
+    },
+    role: {
+      type: String,
+      enum: ['user', 'admin'],
+      default: 'user'
+    },
+    isActive: {
+      type: Boolean,
+      default: true
+    },
     followers: [
       {
         type: mongoose.Schema.Types.ObjectId,
@@ -44,7 +69,6 @@ const userSchema = new mongoose.Schema(
         ref: "User",
       },
     ],
-
     bookmarks: [
       {
         type: mongoose.Schema.Types.ObjectId,
