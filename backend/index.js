@@ -76,26 +76,54 @@ io.on("connection", (socket) => {
         receiverId
       );
 
+      if (!socket.userId || !receiverId) {
+        console.error("Missing user IDs for chat history");
+        socket.emit("error", { message: "Missing user information" });
+        return;
+      }
+
       const messages = await Message.find({
         $or: [
           { sender: socket.userId, receiver: receiverId },
           { sender: receiverId, receiver: socket.userId },
         ],
       })
-        .sort({ timestamp: 1 })
-        .lean()
-        .then((messages) =>
-          messages.map((msg) => ({
-            ...msg,
-            timestamp: msg.timestamp.toISOString(),
-          }))
-        );
+        .populate('sender', 'username firstName lastName')
+        .populate('receiver', 'username firstName lastName')
+        .sort({ createdAt: 1 })
+        .lean();
 
-      console.log("Found messages:", messages);
-      socket.emit("chatHistory", messages);
+      console.log("Found messages:", messages.length);
+      
+      const formattedMessages = messages.map((msg) => {
+        // Ensure we have a valid timestamp
+        const timestamp = msg.createdAt || msg.timestamp || new Date();
+        
+        return {
+          ...msg,
+          timestamp: timestamp instanceof Date ? timestamp.toISOString() : new Date(timestamp).toISOString(),
+          sender: msg.sender ? {
+            _id: msg.sender._id,
+            username: msg.sender.username,
+            firstName: msg.sender.firstName,
+            lastName: msg.sender.lastName
+          } : null,
+          receiver: msg.receiver ? {
+            _id: msg.receiver._id,
+            username: msg.receiver.username,
+            firstName: msg.receiver.firstName,
+            lastName: msg.receiver.lastName
+          } : null
+        };
+      });
+
+      socket.emit("chatHistory", formattedMessages);
     } catch (error) {
       console.error("Error fetching chat history:", error);
-      socket.emit("error", { message: "Failed to fetch chat history" });
+      socket.emit("error", { 
+        message: "Failed to fetch chat history",
+        details: error.message 
+      });
     }
   });
 
