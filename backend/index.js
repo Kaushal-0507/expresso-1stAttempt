@@ -29,17 +29,37 @@ const connectedUsers = new Map();
 io.use((socket, next) => {
   const authHeader = socket.handshake.auth.token;
 
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+  if (!authHeader) {
+    console.error("No auth header provided");
+    return next(new Error("Authentication error: No token provided"));
+  }
+
+  // Remove 'Bearer ' prefix if it exists
+  const token = authHeader.startsWith("Bearer ") 
+    ? authHeader.substring(7) 
+    : authHeader;
+
+  if (!token) {
+    console.error("No token found in auth header");
     return next(new Error("Authentication error: No token provided"));
   }
 
   try {
-    const token = authHeader.split(" ")[1]; // Extract the token
     const decoded = jwt.verify(token, process.env.JWT_SEC);
+    if (!decoded || !decoded.id) {
+      console.error("Invalid token payload:", decoded);
+      return next(new Error("Authentication error: Invalid token payload"));
+    }
     socket.userId = decoded.id;
     next();
   } catch (err) {
     console.error("Socket auth error:", err);
+    if (err.name === "JsonWebTokenError") {
+      return next(new Error("Authentication error: Invalid token format"));
+    }
+    if (err.name === "TokenExpiredError") {
+      return next(new Error("Authentication error: Token expired"));
+    }
     next(new Error("Authentication error: Invalid token"));
   }
 });
@@ -133,6 +153,10 @@ io.on("connection", (socket) => {
       const { receiver, content, timestamp } = messageData;
       console.log("Received message:", messageData);
 
+      if (!socket.userId || !receiver || !content) {
+        throw new Error("Missing required message data");
+      }
+
       // Create and save the message
       const message = new Message({
         sender: socket.userId,
@@ -142,9 +166,28 @@ io.on("connection", (socket) => {
       });
 
       const savedMessage = await message.save();
+      
+      // Populate sender and receiver details
+      const populatedMessage = await Message.findById(savedMessage._id)
+        .populate('sender', 'username firstName lastName')
+        .populate('receiver', 'username firstName lastName')
+        .lean();
+
       const messageToSend = {
-        ...savedMessage.toObject(),
-        timestamp: savedMessage.timestamp.toISOString(),
+        ...populatedMessage,
+        timestamp: populatedMessage.timestamp.toISOString(),
+        sender: {
+          _id: populatedMessage.sender._id,
+          username: populatedMessage.sender.username,
+          firstName: populatedMessage.sender.firstName,
+          lastName: populatedMessage.sender.lastName
+        },
+        receiver: {
+          _id: populatedMessage.receiver._id,
+          username: populatedMessage.receiver.username,
+          firstName: populatedMessage.receiver.firstName,
+          lastName: populatedMessage.receiver.lastName
+        }
       };
 
       console.log("Saved message:", messageToSend);
@@ -162,7 +205,10 @@ io.on("connection", (socket) => {
       }
     } catch (error) {
       console.error("Error sending message:", error);
-      socket.emit("error", { message: "Failed to send message" });
+      socket.emit("error", { 
+        message: "Failed to send message",
+        details: error.message 
+      });
     }
   });
 });

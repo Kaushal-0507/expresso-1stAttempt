@@ -28,6 +28,26 @@ router.get("/check", isAuth, async (req, res) => {
   }
 });
 
+// Validate token endpoint
+router.get("/validate-token", isAuth, (req, res) => {
+  try {
+    // If we reach here, the token is valid (isAuth middleware passed)
+    res.status(200).json({
+      success: true,
+      message: "Token is valid",
+      user: {
+        id: req.user._id,
+        email: req.user.email,
+      },
+    });
+  } catch (error) {
+    res.status(401).json({
+      success: false,
+      message: "Invalid token",
+    });
+  }
+});
+
 router.post("/register", uploadFile, registerUser);
 router.post("/login", loginUser);
 router.get("/logout", logoutUser);
